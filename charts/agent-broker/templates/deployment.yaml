@@ -1,46 +1,90 @@
+{{- range $name, $cfg := .Values.agents }}
+{{- $d := dict "ctx" $ "agent" $name "cfg" $cfg }}
+{{- $s3Enabled := and $cfg.persistence $cfg.persistence.s3 $cfg.persistence.s3.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "agent-broker.fullname" . }}
+  name: {{ include "agent-broker.agentFullname" $d }}
   labels:
-    {{- include "agent-broker.labels" . | nindent 4 }}
+    {{- include "agent-broker.labels" $d | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicas }}
-  {{- with .Values.strategy }}
+  replicas: 1
   strategy:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    type: Recreate
   selector:
     matchLabels:
-      {{- include "agent-broker.selectorLabels" . | nindent 6 }}
+      {{- include "agent-broker.selectorLabels" $d | nindent 6 }}
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
       labels:
-        {{- include "agent-broker.selectorLabels" . | nindent 8 }}
+        {{- include "agent-broker.selectorLabels" $d | nindent 8 }}
     spec:
+      terminationGracePeriodSeconds: 30
+      {{- if $s3Enabled }}
+      initContainers:
+        - name: s3-restore
+          image: amazon/aws-cli:latest
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $cfg.persistence.s3.credentialsSecret }}
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $cfg.persistence.s3.credentialsSecret }}
+                  key: AWS_SECRET_ACCESS_KEY
+          command: [sh, -c]
+          args:
+            - |
+              cp /usr/local/aws-cli/v2/current/bin/aws /tools/aws 2>/dev/null || cp $(which aws) /tools/aws
+              chmod +x /tools/aws
+              {{- range $cfg.persistence.paths }}
+              /tools/aws s3 sync {{ if $cfg.persistence.s3.endpoint }}--endpoint-url {{ $cfg.persistence.s3.endpoint }} {{ end }}"s3://{{ $cfg.persistence.s3.bucket }}/{{ $cfg.persistence.s3.prefix }}/{{ . }}" "/home/agent/{{ . }}" || true
+              {{- end }}
+          volumeMounts:
+            - name: home
+              mountPath: /home/agent
+            - name: tools
+              mountPath: /tools
+      {{- end }}
       containers:
         - name: agent-broker
-          image: "{{ include "agent-broker.image.repository" . | trim }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: {{ include "agent-broker.agentImage" $d | quote }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
           env:
             - name: DISCORD_BOT_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "agent-broker.fullname" . }}
+                  name: {{ include "agent-broker.agentFullname" $d }}
                   key: discord-bot-token
             - name: HOME
               value: /home/agent
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
+            {{- if $s3Enabled }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $cfg.persistence.s3.credentialsSecret }}
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $cfg.persistence.s3.credentialsSecret }}
+                  key: AWS_SECRET_ACCESS_KEY
             {{- end }}
-          {{- with .Values.envFrom }}
+            {{- range $k, $v := $cfg.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- with $cfg.envFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.resources }}
+          {{- with $cfg.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -48,33 +92,50 @@ spec:
             - name: config
               mountPath: /etc/agent-broker
               readOnly: true
-            {{- if .Values.persistence.enabled }}
-            - name: data
+            - name: home
               mountPath: /home/agent
+            {{- if $s3Enabled }}
+            - name: tools
+              mountPath: /tools
+              readOnly: true
             {{- end }}
-            {{- if .Values.agentsMd }}
+            {{- if $cfg.agentsMd }}
             - name: config
               mountPath: /home/agent/AGENTS.md
               subPath: AGENTS.md
             {{- end }}
-      {{- with .Values.nodeSelector }}
+          {{- if $s3Enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - |
+                    {{- range $cfg.persistence.paths }}
+                    /tools/aws s3 sync {{ if $cfg.persistence.s3.endpoint }}--endpoint-url {{ $cfg.persistence.s3.endpoint }} {{ end }}"/home/agent/{{ . }}" "s3://{{ $cfg.persistence.s3.bucket }}/{{ $cfg.persistence.s3.prefix }}/{{ . }}" || true
+                    {{- end }}
+          {{- end }}
+      {{- with $cfg.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with $cfg.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with $cfg.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
         - name: config
           configMap:
-            name: {{ include "agent-broker.fullname" . }}
-        {{- if .Values.persistence.enabled }}
-        - name: data
-          persistentVolumeClaim:
-            claimName: {{ include "agent-broker.fullname" . }}
+            name: {{ include "agent-broker.agentFullname" $d }}
+        - name: home
+          emptyDir: {}
+        {{- if $s3Enabled }}
+        - name: tools
+          emptyDir: {}
         {{- end }}
+{{- end }}

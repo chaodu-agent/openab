@@ -1,31 +1,35 @@
+{{- range $name, $cfg := .Values.agents }}
+{{- $d := dict "ctx" $ "agent" $name "cfg" $cfg }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "agent-broker.fullname" . }}
+  name: {{ include "agent-broker.agentFullname" $d }}
   labels:
-    {{- include "agent-broker.labels" . | nindent 4 }}
+    {{- include "agent-broker.labels" $d | nindent 4 }}
 data:
   config.toml: |
     [discord]
     bot_token = "${DISCORD_BOT_TOKEN}"
-    allowed_channels = [{{ range $i, $ch := .Values.discord.allowedChannels }}{{ if $i }}, {{ end }}"{{ $ch }}"{{ end }}]
+    allowed_channels = [{{ range $i, $ch := $cfg.discord.allowedChannels }}{{ if $i }}, {{ end }}"{{ $ch }}"{{ end }}]
 
     [agent]
-    command = "{{ include "agent-broker.agent.command" . | trim }}"
-    args = {{ include "agent-broker.agent.args" . | trim }}
-    working_dir = "{{ .Values.agent.workingDir }}"
-    {{- if .Values.agent.env }}
-    env = { {{ range $k, $v := .Values.agent.env }}{{ $k }} = "{{ $v }}", {{ end }} }
+    command = "{{ $cfg.command }}"
+    args = {{ $cfg.args | toJson }}
+    working_dir = "{{ $cfg.workingDir }}"
+    {{- if $cfg.env }}
+    env = { {{ range $k, $v := $cfg.env }}{{ $k }} = "{{ $v }}", {{ end }} }
     {{- end }}
 
     [pool]
-    max_sessions = {{ .Values.pool.maxSessions }}
-    session_ttl_hours = {{ .Values.pool.sessionTtlHours }}
+    max_sessions = {{ $cfg.pool.maxSessions }}
+    session_ttl_hours = {{ $cfg.pool.sessionTtlHours }}
 
     [reactions]
-    enabled = {{ .Values.reactions.enabled }}
-    remove_after_reply = {{ .Values.reactions.removeAfterReply }}
-  {{- if .Values.agentsMd }}
+    enabled = {{ $cfg.reactions.enabled }}
+    remove_after_reply = {{ $cfg.reactions.removeAfterReply }}
+  {{- if $cfg.agentsMd }}
   AGENTS.md: |
-    {{- .Values.agentsMd | nindent 4 }}
+    {{- $cfg.agentsMd | nindent 4 }}
   {{- end }}
+{{- end }}
