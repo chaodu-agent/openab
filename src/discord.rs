@@ -86,13 +86,13 @@ impl EventHandler for Handler {
             "channel_id": msg.channel_id.to_string(),
             "is_bot": msg.author.bot,
         });
-        let prompt = format!(
+        let prompt_with_sender = format!(
             "<sender_context>\n{}\n</sender_context>\n\n{}",
             serde_json::to_string(&sender_ctx).unwrap(),
             prompt
         );
 
-        tracing::debug!(prompt = %prompt, in_thread, "processing");
+        tracing::debug!(prompt = %prompt_with_sender, in_thread, "processing");
 
         let thread_id = if in_thread {
             msg.channel_id.get()
@@ -138,7 +138,7 @@ impl EventHandler for Handler {
         let result = stream_prompt(
             &self.pool,
             &thread_key,
-            &prompt,
+            &prompt_with_sender,
             &ctx,
             thread_channel,
             thinking_msg.id,
