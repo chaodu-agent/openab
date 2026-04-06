@@ -229,19 +229,17 @@ async fn stream_prompt(
                         if buf_rx.has_changed().unwrap_or(false) {
                             let content = buf_rx.borrow_and_update().clone();
                             if content != last_content {
-                                if content.len() > 1900 {
-                                    let chunks = format::split_message(&content, 1900);
-                                    if let Some(first) = chunks.first() {
-                                        let _ = edit(&ctx, channel, current_edit_msg, first).await;
-                                    }
-                                    for chunk in chunks.iter().skip(1) {
-                                        if let Ok(new_msg) = channel.say(&ctx.http, chunk).await {
-                                            current_edit_msg = new_msg.id;
-                                        }
-                                    }
+                                // During streaming, only edit the single message.
+                                // If content exceeds Discord's limit, truncate with
+                                // an indicator. The final edit after streaming ends
+                                // will handle proper multi-chunk splitting.
+                                let display = if content.len() > 1900 {
+                                    let truncated: String = content.chars().take(1880).collect();
+                                    format!("{truncated}\n\n_…(streaming)_")
                                 } else {
-                                    let _ = edit(&ctx, channel, current_edit_msg, &content).await;
-                                }
+                                    content.clone()
+                                };
+                                let _ = edit(&ctx, channel, current_edit_msg, &display).await;
                                 last_content = content;
                             }
                         }
