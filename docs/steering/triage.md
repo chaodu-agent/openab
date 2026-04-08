@@ -2,14 +2,16 @@
 
 ## Steps
 
-1. **Confirm type** — ensure one of: `bug`, `feature`, `guidance`
-2. **Verify claims** — be skeptical; find source code or official docs to confirm before accepting a bug report as valid
-3. **Set priority** — add exactly one:
+1. **Check scope** — is the feature/backend involved officially supported? Check README and `config.toml.example` for supported backends, platforms, and configurations. If not supported, link to existing FRs or file a new one.
+2. **Search for duplicates** — search existing issues for the same root cause or overlapping scope. Link or close as duplicate if covered elsewhere.
+3. **Confirm type** — ensure one of: `bug`, `feature`, `guidance`
+4. **Verify claims** — be skeptical; find source code or official docs to confirm before accepting a bug report as valid
+5. **Set priority** — add exactly one:
    - `p0` 🔴 Critical — drop everything
    - `p1` 🟠 High — address this sprint
    - `p2` 🟡 Medium — planned work
    - `p3` 🟤 Low — nice to have
-4. **Remove `needs-triage`** — triage complete
+6. **Remove `needs-triage`** — triage complete
 
 ## Priority Guidelines
 
@@ -19,6 +21,17 @@
 | p1 | Major feature broken for a class of users (e.g. all Claude Code / Cursor users) |
 | p2 | Bug with workaround, or planned feature work |
 | p3 | Minor improvement, cosmetic, nice to have |
+
+## Supported Backends (check before triaging)
+
+| Preset | CLI | Status |
+|--------|-----|--------|
+| (default) | Kiro CLI | ✅ Supported |
+| `codex` | Codex | ✅ Supported |
+| `claude` | Claude Code | ✅ Supported |
+| `gemini` | Gemini CLI | ✅ Supported |
+
+Issues involving unsupported backends (e.g. Cursor) should be linked to the relevant FR and triaged accordingly — don't treat them as p1 bugs against openab.
 
 ## Response Template
 
