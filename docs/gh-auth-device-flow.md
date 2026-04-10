@@ -65,9 +65,11 @@ How it works:
 gh auth status
 ```
 
-## Steering / prompt snippet
+## Steering / prompt snippet (Kiro CLI only)
 
-To make your agent always handle `gh login` correctly, create `~/.kiro/steering/gh.md`:
+> **Note:** This section applies only to [Kiro CLI](https://kiro.dev) agents. Other agent backends (Claude Code, Codex, Gemini) have their own prompt/config mechanisms.
+
+To make your Kiro agent always handle `gh login` correctly, create `~/.kiro/steering/gh.md`:
 
 ```bash
 mkdir -p ~/.kiro/steering
