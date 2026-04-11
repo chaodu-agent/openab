@@ -292,16 +292,22 @@ async fn download_and_encode_image(attachment: &serenity::model::channel::Attach
 
     let response = match HTTP_CLIENT.get(url).send().await {
         Ok(resp) => resp,
-        Err(e) => { error!("download failed {url}: {e}"); return None; }
+        Err(e) => { error!(url = %url, error = %e, "download failed"); return None; }
     };
     if !response.status().is_success() {
-        error!("HTTP {}: {url}", response.status());
+        error!(url = %url, status = %response.status(), "HTTP error downloading image");
         return None;
     }
     let bytes = match response.bytes().await {
         Ok(b) => b,
-        Err(e) => { error!("read failed {url}: {e}"); return None; }
+        Err(e) => { error!(url = %url, error = %e, "read failed"); return None; }
     };
+
+    // Defense-in-depth: verify actual download size
+    if bytes.len() as u64 > MAX_SIZE {
+        error!(filename = %attachment.filename, size = bytes.len(), "downloaded image exceeds limit");
+        return None;
+    }
 
     // Resize and compress
     let (output_bytes, output_mime) = match resize_and_compress(&bytes) {
