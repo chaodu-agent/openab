@@ -52,6 +52,9 @@ async fn main() -> anyhow::Result<()> {
     };
 
     if cfg.stt.enabled {
+        if cfg.stt.api_key.is_empty() {
+            anyhow::bail!("stt.enabled = true but stt.api_key is empty — set the key or disable STT");
+        }
         info!(model = %cfg.stt.model, base_url = %cfg.stt.base_url, "STT enabled");
     }
 

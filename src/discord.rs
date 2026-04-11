@@ -127,14 +127,10 @@ impl EventHandler for Handler {
             text: prompt_with_sender.clone(),
         });
 
-        // Add image attachments
+        // Process attachments: route by content type (audio → STT, image → encode)
         if !msg.attachments.is_empty() {
             for attachment in &msg.attachments {
-                if let Some(content_block) = download_and_encode_image(attachment).await {
-                    debug!(url = %attachment.url, filename = %attachment.filename, "adding image attachment");
-                    content_blocks.push(content_block);
-                } else if is_audio_attachment(attachment) {
-                    // STT: transcribe audio attachments (voice messages)
+                if is_audio_attachment(attachment) {
                     if self.stt_config.enabled {
                         if let Some(transcript) = download_and_transcribe(attachment, &self.stt_config).await {
                             debug!(filename = %attachment.filename, chars = transcript.len(), "voice transcript injected");
@@ -145,6 +141,9 @@ impl EventHandler for Handler {
                     } else {
                         debug!(filename = %attachment.filename, "skipping audio attachment (STT disabled)");
                     }
+                } else if let Some(content_block) = download_and_encode_image(attachment).await {
+                    debug!(url = %attachment.url, filename = %attachment.filename, "adding image attachment");
+                    content_blocks.push(content_block);
                 }
             }
         }
@@ -267,7 +266,10 @@ async fn download_and_transcribe(
     }
     let bytes = resp.bytes().await.ok()?.to_vec();
 
-    crate::stt::transcribe(stt_config, bytes, attachment.filename.clone()).await
+    let mime_type = attachment.content_type.as_deref().unwrap_or("audio/ogg");
+    let mime_type = mime_type.split(';').next().unwrap_or(mime_type).trim();
+
+    crate::stt::transcribe(&HTTP_CLIENT, stt_config, bytes, attachment.filename.clone(), mime_type).await
 }
 
 /// Maximum dimension (width or height) for resized images.

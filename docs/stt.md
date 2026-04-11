@@ -48,7 +48,7 @@ base_url = "https://api.groq.com/openai/v1" # default
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `enabled` | no | `false` | Enable/disable STT. When disabled, audio attachments are silently skipped. |
-| `api_key` | yes* | — | API key for the STT provider. *Not needed for local servers. |
+| `api_key` | yes* | — | API key for the STT provider. *Not needed for local servers — use any non-empty string (e.g. `"not-needed"`). An empty string with `enabled = true` will fail at startup. |
 | `model` | no | `whisper-large-v3-turbo` | Whisper model name. Varies by provider. |
 | `base_url` | no | `https://api.groq.com/openai/v1` | OpenAI-compatible API base URL. |
 
@@ -130,3 +130,10 @@ enabled = false
 ```
 
 When disabled, audio attachments are silently skipped with no impact on existing functionality.
+
+## Technical Notes
+
+- openab sends `response_format=json` in the transcription request to ensure the response is always parseable JSON. Some local whisper servers default to plain text output without this parameter.
+- The actual MIME type from the Discord attachment is passed through to the STT API (e.g. `audio/ogg`, `audio/mp4`, `audio/wav`).
+- Environment variables in config values are expanded via `${VAR}` syntax (e.g. `api_key = "${GROQ_API_KEY}"`).
+- The `api_key` field must be non-empty when `enabled = true` — openab will refuse to start otherwise.

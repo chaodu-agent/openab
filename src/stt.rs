@@ -3,24 +3,29 @@ use reqwest::multipart;
 use tracing::{debug, error};
 
 /// Transcribe audio bytes via an OpenAI-compatible `/audio/transcriptions` endpoint.
-pub async fn transcribe(cfg: &SttConfig, audio_bytes: Vec<u8>, filename: String) -> Option<String> {
+pub async fn transcribe(
+    client: &reqwest::Client,
+    cfg: &SttConfig,
+    audio_bytes: Vec<u8>,
+    filename: String,
+    mime_type: &str,
+) -> Option<String> {
     let url = format!("{}/audio/transcriptions", cfg.base_url.trim_end_matches('/'));
 
     let file_part = multipart::Part::bytes(audio_bytes)
-        .file_name(filename.clone())
-        .mime_str("audio/ogg")
+        .file_name(filename)
+        .mime_str(mime_type)
         .ok()?;
 
     let form = multipart::Form::new()
         .part("file", file_part)
-        .text("model", cfg.model.clone());
+        .text("model", cfg.model.clone())
+        .text("response_format", "json");
 
-    let client = reqwest::Client::new();
     let resp = match client
         .post(&url)
         .bearer_auth(&cfg.api_key)
         .multipart(form)
-        .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
     {
