@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("config.toml"));
 
-    let cfg = config::load_config(&config_path)?;
+    let mut cfg = config::load_config(&config_path)?;
     info!(
         agent_cmd = %cfg.agent.command,
         pool_max = cfg.pool.max_sessions,
@@ -52,8 +52,17 @@ async fn main() -> anyhow::Result<()> {
     };
 
     if cfg.stt.enabled {
+        // Auto-detect GROQ_API_KEY from env if api_key not set in config
         if cfg.stt.api_key.is_empty() {
-            anyhow::bail!("stt.enabled = true but stt.api_key is empty — set the key or disable STT");
+            if let Ok(key) = std::env::var("GROQ_API_KEY") {
+                if !key.is_empty() {
+                    info!("stt.api_key not set, using GROQ_API_KEY from environment");
+                    cfg.stt.api_key = key;
+                }
+            }
+        }
+        if cfg.stt.api_key.is_empty() {
+            anyhow::bail!("stt.enabled = true but no API key found — set stt.api_key in config or export GROQ_API_KEY");
         }
         info!(model = %cfg.stt.model, base_url = %cfg.stt.base_url, "STT enabled");
     }

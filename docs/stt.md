@@ -9,10 +9,15 @@ Add an `[stt]` section to your `config.toml`:
 ```toml
 [stt]
 enabled = true
-api_key = "${GROQ_API_KEY}"
 ```
 
-That's it. Voice messages will now be transcribed via Groq's free tier and injected into the agent prompt.
+If `GROQ_API_KEY` is set in your environment, that's all you need — openab will auto-detect it and use Groq's free tier. You can also set the key explicitly:
+
+```toml
+[stt]
+enabled = true
+api_key = "${GROQ_API_KEY}"
+```
 
 ## How It Works
 
@@ -48,7 +53,7 @@ base_url = "https://api.groq.com/openai/v1" # default
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `enabled` | no | `false` | Enable/disable STT. When disabled, audio attachments are silently skipped. |
-| `api_key` | yes* | — | API key for the STT provider. *Not needed for local servers — use any non-empty string (e.g. `"not-needed"`). An empty string with `enabled = true` will fail at startup. |
+| `api_key` | no* | — | API key for the STT provider. *Auto-detected from `GROQ_API_KEY` env var if not set. For local servers, use any non-empty string (e.g. `"not-needed"`). |
 | `model` | no | `whisper-large-v3-turbo` | Whisper model name. Varies by provider. |
 | `base_url` | no | `https://api.groq.com/openai/v1` | OpenAI-compatible API base URL. |
 
@@ -136,4 +141,4 @@ When disabled, audio attachments are silently skipped with no impact on existing
 - openab sends `response_format=json` in the transcription request to ensure the response is always parseable JSON. Some local whisper servers default to plain text output without this parameter.
 - The actual MIME type from the Discord attachment is passed through to the STT API (e.g. `audio/ogg`, `audio/mp4`, `audio/wav`).
 - Environment variables in config values are expanded via `${VAR}` syntax (e.g. `api_key = "${GROQ_API_KEY}"`).
-- The `api_key` field must be non-empty when `enabled = true` — openab will refuse to start otherwise.
+- The `api_key` field is auto-detected from the `GROQ_API_KEY` environment variable if not set in config. If neither is available, openab will refuse to start with `stt.enabled = true`.
