@@ -3,6 +3,34 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
 
+/// Controls whether the bot processes messages from other Discord bots.
+///
+/// Inspired by Hermes Agent's `DISCORD_ALLOW_BOTS` 3-value design:
+/// - `Off` (default): ignore all bot messages (safe default, no behavior change)
+/// - `Mentions`: only process bot messages that @mention this bot (natural loop breaker)
+/// - `All`: process all bot messages (capped at `MAX_CONSECUTIVE_BOT_TURNS`)
+///
+/// The bot's own messages are always ignored regardless of this setting.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum AllowBots {
+    #[default]
+    Off,
+    Mentions,
+    All,
+}
+
+impl<'de> Deserialize<'de> for AllowBots {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "off" | "none" | "false" => Ok(Self::Off),
+            "mentions" => Ok(Self::Mentions),
+            "all" | "true" => Ok(Self::All),
+            other => Err(serde::de::Error::unknown_variant(other, &["off", "mentions", "all"])),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub discord: DiscordConfig,
@@ -11,7 +39,35 @@ pub struct Config {
     pub pool: PoolConfig,
     #[serde(default)]
     pub reactions: ReactionsConfig,
+    #[serde(default)]
+    pub stt: SttConfig,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SttConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default = "default_stt_model")]
+    pub model: String,
+    #[serde(default = "default_stt_base_url")]
+    pub base_url: String,
+}
+
+impl Default for SttConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            api_key: String::new(),
+            model: default_stt_model(),
+            base_url: default_stt_base_url(),
+        }
+    }
+}
+
+fn default_stt_model() -> String { "whisper-large-v3-turbo".into() }
+fn default_stt_base_url() -> String { "https://api.groq.com/openai/v1".into() }
 
 #[derive(Debug, Deserialize)]
 pub struct DiscordConfig {
@@ -20,6 +76,15 @@ pub struct DiscordConfig {
     pub allowed_channels: Vec<String>,
     #[serde(default)]
     pub allowed_users: Vec<String>,
+    #[serde(default)]
+    pub allow_bot_messages: AllowBots,
+    /// When non-empty, only bot messages from these IDs pass the bot gate.
+    /// Combines with `allow_bot_messages`: the mode check runs first, then
+    /// the allowlist filters further. Empty = allow any bot (mode permitting).
+    /// Only relevant when `allow_bot_messages` is `"mentions"` or `"all"`;
+    /// ignored when `"off"` since all bot messages are rejected before this check.
+    #[serde(default)]
+    pub trusted_bot_ids: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,7 +154,7 @@ pub struct ReactionTiming {
 
 fn default_working_dir() -> String { "/tmp".into() }
 fn default_max_sessions() -> usize { 10 }
-fn default_ttl_hours() -> u64 { 24 }
+fn default_ttl_hours() -> u64 { 4 }
 fn default_true() -> bool { true }
 
 fn emoji_queued() -> String { "👀".into() }
