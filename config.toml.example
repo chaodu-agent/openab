@@ -2,7 +2,7 @@
 
 [discord]
 bot_token = "${DISCORD_BOT_TOKEN}"
-allowed_channels = ["1234567890"]       # empty or omitted = allow all channels
+allowed_channels = ["1234567890"]       # required — empty or omitted = deny all channels (secure by default)
 # allowed_users = ["<YOUR_DISCORD_USER_ID>"]  # empty or omitted = allow all users
 # allow_bot_messages = "off"  # "off" (default) | "mentions" | "all"
                                # "mentions" is recommended for multi-agent collaboration
