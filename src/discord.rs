@@ -29,11 +29,12 @@ const PARTICIPATION_CACHE_MAX: usize = 1000;
 
 pub struct DiscordAdapter {
     http: Arc<Http>,
+    allow_bot_messages: AllowBots,
 }
 
 impl DiscordAdapter {
-    pub fn new(http: Arc<Http>) -> Self {
-        Self { http }
+    pub fn new(http: Arc<Http>, allow_bot_messages: AllowBots) -> Self {
+        Self { http, allow_bot_messages }
     }
 }
 
@@ -70,7 +71,7 @@ impl ChatAdapter for DiscordAdapter {
     }
 
     fn use_streaming(&self) -> bool {
-        true
+        self.allow_bot_messages == AllowBots::Off
     }
 
     async fn create_thread(
@@ -321,7 +322,7 @@ impl EventHandler for Handler {
         }
 
         let adapter = self.adapter.get_or_init(|| {
-            Arc::new(DiscordAdapter::new(ctx.http.clone()))
+            Arc::new(DiscordAdapter::new(ctx.http.clone(), self.allow_bot_messages))
         }).clone();
 
         let channel_id = msg.channel_id.get();
