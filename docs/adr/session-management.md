@@ -1,21 +1,17 @@
-# RFC 001: Session Management
+# ADR: Session Management
 
-| Field | Value |
-|-------|-------|
-| **RFC** | 001 |
-| **Title** | Session Management |
-| **Author** | @thepagent |
-| **Status** | Draft |
-| **Tracking** | [#75](https://github.com/thepagent/agent-broker/issues/75), [#78](https://github.com/thepagent/agent-broker/issues/78) |
-| **Created** | 2026-04-06 |
+- **Status:** Draft
+- **Date:** 2026-04-06
+- **Author:** @thepagent
+- **Tracking:** [#75](https://github.com/thepagent/agent-broker/issues/75), [#78](https://github.com/thepagent/agent-broker/issues/78)
 
 ---
 
-## Summary
+## 1. Context & Decision
 
 This RFC proposes a comprehensive session management system for agent-broker, covering lifecycle control, isolation, observability, security, and multi-agent support. The design is split into four incremental phases to allow iterative delivery.
 
-## Motivation
+## 2. Motivation
 
 Today agent-broker's session handling is minimal:
 
@@ -26,7 +22,7 @@ Today agent-broker's session handling is minimal:
 
 As adoption grows, we need proper lifecycle management, observability, and guardrails.
 
-## Related Issues
+## 3. Related Issues
 
 | Issue | Description |
 |-------|-------------|
@@ -37,7 +33,7 @@ As adoption grows, we need proper lifecycle management, observability, and guard
 
 ---
 
-## Design
+## 4. Design
 
 ### 1. Session Lifecycle
 
@@ -298,7 +294,7 @@ Pool key becomes `(thread_id, agent_name)`.
 
 ---
 
-## Implementation Phases
+## 5. Implementation Phases
 
 | Phase | Scope | Issues | Complexity |
 |-------|-------|--------|------------|
@@ -311,7 +307,7 @@ Each phase is independently shippable. Later phases build on earlier ones but do
 
 ---
 
-## Open Questions
+## 6. Open Questions
 
 1. **Management API auth:** Should `/sessions` endpoints require authentication (API key, mTLS, or network-level restriction)?
 2. **Session resume:** Should we support resuming a session after agent crash? This requires agent-side support for conversation replay.
@@ -320,7 +316,7 @@ Each phase is independently shippable. Later phases build on earlier ones but do
 
 ---
 
-## References
+## 7. References
 
 - [ACP Protocol Specification](https://github.com/anthropics/acp)
 - Tracking issue: [#75](https://github.com/thepagent/agent-broker/issues/75)
