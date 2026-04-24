@@ -6,7 +6,7 @@ When reviewing a PR, always address these four questions:
 
 1. **他解決什麼問題或需求** — 這個 PR 要解決什麼痛點或滿足什麼需求？用白話說明背景。
 2. **他用什麼方式解決** — 具體的技術做法、架構設計、關鍵實作細節。
-3. **他考慮過其他方式嗎** — 從 PR 描述、討論、commit history 中找出被考慮過但沒採用的替代方案，以及為什麼被否決。
+3. **他考慮過其他方式嗎** — PR 描述中是否說明了為什麼選擇這個方式而非其他替代方案？如果沒有，建議作者補充。
 4. **這是目前最好的方式嗎** — 評估現有做法是否最佳，指出可以改進的地方和潛在風險。
 
 ## Severity Levels
@@ -41,12 +41,12 @@ A 4000×2000 landscape image gets squashed into 1200×1200.
 
 ### Fix
 
-​```rust
+```rust
 let ratio = f64::from(IMAGE_MAX_DIMENSION_PX) / f64::max(w, h);
 let new_w = (f64::from(w) * ratio) as u32;
 let new_h = (f64::from(h) * ratio) as u32;
 img.resize(new_w, new_h, image::imageops::FilterType::Lanczos3)
-​```
+```
 ```
 
 ## Self-Review Checklist (before opening PR)
@@ -64,3 +64,13 @@ Authors should check these before requesting review:
 - **Classify severity** — not everything is a blocker; use 🔴🟡🟢 so the author knows what to prioritize
 - **Acknowledge good work** — if something is well done, say so
 - **One round if possible** — batch all feedback in one review pass to avoid back-and-forth
+
+## Output Format — Traffic Light
+
+After the review, structure the output using this format:
+
+🟢 **INFO** — Things that look good, patterns followed correctly, positive observations.
+
+🟡 **NIT** — Minor suggestions, documentation improvements, nice-to-haves. Not blockers.
+
+🔴 **SUGGESTED CHANGES** — Significant concerns, DX footguns, missing pieces that should be addressed. Frame as suggestions for maintainers to consider (we are triagers, not maintainers).
